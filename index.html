@@ -484,6 +484,12 @@
       color: #bbf7d0;
     }
 
+    .media-btn.download {
+      border-color: rgba(245, 158, 11, .58);
+      background: rgba(245, 158, 11, .16);
+      color: #fde68a;
+    }
+
     .media-btn:disabled,
     .media-btn.disabled {
       opacity: .48;
@@ -512,6 +518,88 @@
       height: 1px;
       opacity: 0;
       pointer-events: none;
+    }
+
+    .sheet {
+      position: fixed;
+      inset: 0;
+      z-index: 80;
+      display: grid;
+      align-items: end;
+      background: rgba(0, 0, 0, .62);
+    }
+
+    .sheet[hidden] {
+      display: none;
+    }
+
+    .sheet-panel {
+      max-height: min(78vh, 720px);
+      overflow: auto;
+      border: 1px solid rgba(148, 163, 184, .22);
+      border-radius: 8px 8px 0 0;
+      background: #080c15;
+      padding: 14px;
+      box-shadow: 0 -20px 60px rgba(0, 0, 0, .45);
+    }
+
+    .sheet-head {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 12px;
+    }
+
+    .sheet-title {
+      margin: 0;
+      font-size: 18px;
+      font-weight: 950;
+    }
+
+    .sheet-close {
+      width: 40px;
+      height: 40px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: rgba(15, 23, 42, .88);
+      color: var(--text);
+      cursor: pointer;
+      font-weight: 950;
+    }
+
+    .download-list {
+      display: grid;
+      gap: 8px;
+    }
+
+    .download-row {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto;
+      gap: 10px;
+      align-items: center;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: rgba(15, 23, 42, .72);
+      padding: 10px;
+    }
+
+    .download-row strong {
+      display: block;
+      font-size: 13px;
+      line-height: 1.2;
+    }
+
+    .download-row span {
+      display: block;
+      margin-top: 4px;
+      color: var(--muted);
+      font-size: 11px;
+      font-weight: 750;
+    }
+
+    .download-row .media-btn {
+      min-width: 104px;
     }
 
     .empty {
@@ -601,6 +689,31 @@
         align-items: flex-start;
         flex-direction: column;
       }
+
+      .card {
+        min-height: 0;
+        padding: 14px;
+      }
+
+      .actions {
+        grid-template-columns: 1fr;
+      }
+
+      .media-btn,
+      .seen,
+      .month-action,
+      .sd-tools {
+        min-height: 44px;
+        font-size: 14px;
+      }
+
+      .download-row {
+        grid-template-columns: 1fr;
+      }
+
+      .download-row .media-btn {
+        width: 100%;
+      }
     }
   </style>
 </head>
@@ -669,6 +782,15 @@
       <input class="hidden-picker" id="sdPicker" type="file" accept="video/*,.mp4,.mkv,.mov" multiple>
     </main>
   </div>
+  <div class="sheet" id="downloadSheet" hidden>
+    <div class="sheet-panel">
+      <div class="sheet-head">
+        <h2 class="sheet-title" id="sheetTitle">Descargas</h2>
+        <button class="sheet-close" id="sheetClose" type="button">X</button>
+      </div>
+      <div class="download-list" id="downloadList"></div>
+    </div>
+  </div>
 
   <script>
     const YEARS = [2021, 2022, 2023, 2024, 2025, 2026];
@@ -676,6 +798,25 @@
     const STORAGE_LAST = "wwe_calendar_last_seen_v1";
     const STORAGE_YEAR = "wwe_calendar_year_v1";
     const STORAGE_SD = "wwe_calendar_sd_library_v1";
+    const ARCHIVE = "https://archive.org";
+
+    const downloadCatalog = [
+      { identifier: "war2021_tsc1996", show: "RAW", year: 2021 },
+      { identifier: "war2022_tsc1996", show: "RAW", year: 2022 },
+      { identifier: "war2023_tsc1996", show: "RAW", year: 2023 },
+      { identifier: "war2024_tsc1996", show: "RAW", year: 2024 },
+      { identifier: "nwoDkcamS2021", show: "SMACKDOWN", year: 2021 },
+      { identifier: "nwoDkcamS2022", show: "SMACKDOWN", year: 2022 },
+      { identifier: "nwoDkcamS2023", show: "SMACKDOWN", year: 2023 },
+      { identifier: "nwoDkcamS2024", show: "SMACKDOWN", year: 2024 }
+    ];
+
+    const englishMonths = {
+      jan: "01", january: "01", feb: "02", february: "02", mar: "03", march: "03",
+      apr: "04", april: "04", may: "05", jun: "06", june: "06", jul: "07", july: "07",
+      aug: "08", august: "08", sep: "09", sept: "09", september: "09",
+      oct: "10", october: "10", nov: "11", november: "11", dec: "12", december: "12"
+    };
 
     const monthNames = [
       "Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio",
@@ -789,6 +930,8 @@
     let sdLibrary = readSdLibrary();
     let sessionFiles = new Map();
     let pendingPickItem = null;
+    let metadataCache = new Map();
+    let resolvedDownloads = new Map();
 
     const yearsEl = document.getElementById("years");
     const calendarEl = document.getElementById("calendar");
@@ -797,6 +940,9 @@
     const searchEl = document.getElementById("search");
     const showSeenEl = document.getElementById("showSeen");
     const sdPickerEl = document.getElementById("sdPicker");
+    const downloadSheetEl = document.getElementById("downloadSheet");
+    const downloadListEl = document.getElementById("downloadList");
+    const sheetTitleEl = document.getElementById("sheetTitle");
 
     function readSeen() {
       try {
@@ -870,16 +1016,137 @@
       return null;
     }
 
+    function downloadCatalogEntry(item) {
+      const year = Number(item.date.slice(0, 4));
+      return downloadCatalog.find(entry => entry.show === item.type && entry.year === year) || null;
+    }
+
+    function canDownloadDirect(item) {
+      return Boolean(downloadCatalogEntry(item));
+    }
+
+    function archiveDownloadUrl(identifier, filename) {
+      return ARCHIVE + "/download/" + identifier + "/" + encodeURIComponent(filename);
+    }
+
+    function validMediaFile(filename) {
+      const lowered = filename.toLowerCase();
+      const blocked = [
+        ".thumbs/", ".xml", ".sqlite", "_files.xml", "_meta.xml", ".torrent",
+        ".jpg", ".png", ".nfo", ".srt", ".idx", ".sub", "__ia_thumb", ".ia.mp4"
+      ];
+      return (lowered.endsWith(".mp4") || lowered.endsWith(".mkv")) && !blocked.some(part => lowered.includes(part));
+    }
+
+    function parseRawDate(filename) {
+      const patterns = [
+        /WWE\.Monday\.Night\.Raw\.(\d{4})\.(\d{2})\.(\d{2})/i,
+        /WWE\.RAW\.(\d{4})\.(\d{2})\.(\d{2})/i,
+        /WWE\.Raw\.(\d{4})\.(\d{2})\.(\d{2})/i
+      ];
+      for (const pattern of patterns) {
+        const match = filename.match(pattern);
+        if (match) return match[1] + "-" + match[2] + "-" + match[3];
+      }
+      return null;
+    }
+
+    function parseSmackDownDate(filename) {
+      let match = filename.match(/(\w{3,9})\.?\s+(\d{1,2}),\s*(\d{4})/);
+      if (match && englishMonths[match[1].toLowerCase()]) {
+        return match[3] + "-" + englishMonths[match[1].toLowerCase()] + "-" + match[2].padStart(2, "0");
+      }
+      const patterns = [
+        /WWE\.SmackDown\.(\d{4})\.(\d{2})\.(\d{2})/i,
+        /WWE\.Friday\.Night\.SmackDown\.(\d{4})\.(\d{2})\.(\d{2})/i,
+        /SmackDown\.\d+\.(\w+)\.(\d{1,2})\.(20\d{2})/i,
+        /S\d+E\d+[\s._]+SmackDown[\s._]+(\d{4})\.(\d{2})\.(\d{2})/i,
+        /SmackDown\s*-\s*S\d+E\d+\s*-\s*(0[1-9]|1[0-2])-(0[1-9]|[12]\d|3[01])-(20\d{2})/i,
+        /SmackDown\.(\d{4})\.(\d{2})\.(\d{2})/i,
+        /(20\d{2})\.(0[1-9]|1[0-2])\.(0[1-9]|[12]\d|3[01])/,
+        /(20\d{2})-(0[1-9]|1[0-2])-(0[1-9]|[12]\d|3[01])/
+      ];
+      for (let index = 0; index < patterns.length; index += 1) {
+        match = filename.match(patterns[index]);
+        if (!match) continue;
+        if (index === 2 && englishMonths[match[1].toLowerCase()]) {
+          return match[3] + "-" + englishMonths[match[1].toLowerCase()] + "-" + match[2].padStart(2, "0");
+        }
+        if (index === 4) return match[3] + "-" + match[1] + "-" + match[2];
+        return match[1] + "-" + match[2] + "-" + match[3];
+      }
+      return null;
+    }
+
+    async function archiveMetadata(identifier) {
+      if (metadataCache.has(identifier)) return metadataCache.get(identifier);
+      const res = await fetch(ARCHIVE + "/metadata/" + identifier);
+      if (!res.ok) throw new Error("No pude cargar el catalogo de archive.org");
+      const data = await res.json();
+      metadataCache.set(identifier, data);
+      return data;
+    }
+
+    async function resolveDownload(item) {
+      const key = catalogKey(item);
+      if (resolvedDownloads.has(key)) return resolvedDownloads.get(key);
+      const entry = downloadCatalogEntry(item);
+      if (!entry) return null;
+      const data = await archiveMetadata(entry.identifier);
+      let best = null;
+      (data.files || []).forEach(fileInfo => {
+        const filename = fileInfo.name || "";
+        if (!validMediaFile(filename)) return;
+        const foundDate = entry.show === "RAW" ? parseRawDate(filename) : parseSmackDownDate(filename);
+        if (foundDate !== item.date) return;
+        if (best && best.filename.toLowerCase().endsWith(".mp4") && filename.toLowerCase().endsWith(".mkv")) return;
+        best = {
+          filename,
+          url: archiveDownloadUrl(entry.identifier, filename),
+          length: fileInfo.length || "",
+          archiveUrl: ARCHIVE + "/details/" + entry.identifier
+        };
+      });
+      resolvedDownloads.set(key, best);
+      return best;
+    }
+
+    async function downloadDirect(item, button) {
+      if (!canDownloadDirect(item)) {
+        alert("Este capitulo no tiene enlace directo de descarga en la app.");
+        return;
+      }
+      const original = button.textContent;
+      button.disabled = true;
+      button.textContent = "Buscando...";
+      try {
+        const resolved = await resolveDownload(item);
+        if (!resolved) {
+          alert("No encontre el archivo de este capitulo.");
+          return;
+        }
+        const link = document.createElement("a");
+        link.href = resolved.url;
+        link.target = "_blank";
+        link.rel = "noopener";
+        link.download = resolved.filename;
+        document.body.appendChild(link);
+        link.click();
+        link.remove();
+      } catch {
+        alert("No pude preparar la descarga. Revisa tu conexion e intenta otra vez.");
+      } finally {
+        button.disabled = false;
+        button.textContent = original;
+      }
+    }
+
     function sdRecordForItem(item) {
       return sdLibrary[catalogKey(item)] || null;
     }
 
     function hasLocalFile(item) {
       return Boolean(sdRecordForItem(item) || sessionFiles.has(catalogKey(item)));
-    }
-
-    async function refreshDownloads() {
-      return;
     }
 
     function normalizeText(value) {
@@ -995,14 +1262,43 @@
     }
 
     async function startMonthDownload(monthKey, button) {
-      const items = monthDownloadItems(monthKey).filter(item => {
-        return !hasLocalFile(item);
-      });
+      const items = monthDownloadItems(monthKey);
       if (!items.length) {
-        alert("Este mes ya esta marcado como en SD o no tiene capitulos con este filtro.");
+        alert("Este mes no tiene capitulos con este filtro.");
         return;
       }
-      importSdFiles();
+      openMonthDownloads(monthKey, items);
+    }
+
+    function openMonthDownloads(monthKey, items) {
+      const [year, month] = monthKey.split("-").map(Number);
+      sheetTitleEl.textContent = "Descargar " + monthNames[month - 1] + " " + year;
+      downloadListEl.innerHTML = "";
+      items.forEach(item => {
+        const row = document.createElement("div");
+        row.className = "download-row";
+        const copy = document.createElement("div");
+        const title = document.createElement("strong");
+        title.textContent = item.title;
+        const meta = document.createElement("span");
+        meta.textContent = labelForType(item.type) + " - " + shortDate(item.date);
+        copy.append(title, meta);
+
+        const action = document.createElement("button");
+        action.type = "button";
+        action.className = canDownloadDirect(item) ? "media-btn download" : "media-btn disabled";
+        action.textContent = canDownloadDirect(item) ? "Descargar" : "Sin enlace";
+        action.disabled = !canDownloadDirect(item);
+        action.addEventListener("click", () => downloadDirect(item, action));
+        row.append(copy, action);
+        downloadListEl.appendChild(row);
+      });
+      downloadSheetEl.hidden = false;
+    }
+
+    function closeDownloadSheet() {
+      downloadSheetEl.hidden = true;
+      downloadListEl.innerHTML = "";
     }
 
     function generateWeekly(type, weekday, year) {
@@ -1189,24 +1485,24 @@
       actions.className = "actions";
       const downloadBtn = document.createElement("button");
       downloadBtn.type = "button";
-      downloadBtn.className = "media-btn primary";
-      downloadBtn.textContent = "Marcar SD";
-      downloadBtn.disabled = false;
+      downloadBtn.className = "media-btn download";
+      downloadBtn.textContent = canDownloadDirect(item) ? "Descargar" : "Sin descarga";
+      downloadBtn.disabled = !canDownloadDirect(item);
       downloadBtn.addEventListener("click", () => {
-        pickFileForItem(item);
+        downloadDirect(item, downloadBtn);
       });
 
       if (downloaded) {
         const watch = document.createElement("button");
         watch.type = "button";
-        watch.className = "media-btn";
+        watch.className = "media-btn primary";
         watch.textContent = sessionFiles.has(catalogKey(item)) ? "Ver SD" : "Elegir video";
         watch.addEventListener("click", () => openLocalFile(item));
         actions.append(downloadBtn, watch);
       } else {
         const watch = document.createElement("button");
         watch.type = "button";
-        watch.className = "media-btn";
+        watch.className = "media-btn primary";
         watch.textContent = "Elegir video";
         watch.addEventListener("click", () => pickFileForItem(item));
         actions.append(downloadBtn, watch);
@@ -1250,7 +1546,7 @@
         const action = document.createElement("button");
         action.type = "button";
         action.className = "month-action";
-        action.textContent = "Importar mes";
+        action.textContent = "Descargar mes";
         action.disabled = !monthItems.length;
         action.title = readyCount + "/" + monthItems.length + " capitulos en SD";
         action.addEventListener("click", event => {
@@ -1300,9 +1596,12 @@
 
     document.getElementById("importSd").addEventListener("click", importSdFiles);
     sdPickerEl.addEventListener("change", event => handleSdFiles(event.target.files));
+    document.getElementById("sheetClose").addEventListener("click", closeDownloadSheet);
+    downloadSheetEl.addEventListener("click", event => {
+      if (event.target === downloadSheetEl) closeDownloadSheet();
+    });
 
     render();
-    refreshDownloads();
   </script>
 </body>
 </html>
