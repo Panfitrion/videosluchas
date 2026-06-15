@@ -1125,20 +1125,24 @@
           alert("No encontre el archivo de este capitulo.");
           return;
         }
-        const link = document.createElement("a");
-        link.href = resolved.url;
-        link.target = "_blank";
-        link.rel = "noopener";
-        link.download = resolved.filename;
-        document.body.appendChild(link);
-        link.click();
-        link.remove();
+        triggerDownload(resolved);
       } catch {
         alert("No pude preparar la descarga. Revisa tu conexion e intenta otra vez.");
       } finally {
         button.disabled = false;
         button.textContent = original;
       }
+    }
+
+    function triggerDownload(resolved) {
+      const link = document.createElement("a");
+      link.href = resolved.url;
+      link.target = "_blank";
+      link.rel = "noopener";
+      link.download = resolved.filename;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
     }
 
     function sdRecordForItem(item) {
@@ -1262,15 +1266,41 @@
     }
 
     async function startMonthDownload(monthKey, button) {
-      const items = monthDownloadItems(monthKey);
+      const items = monthDownloadItems(monthKey).filter(canDownloadDirect);
       if (!items.length) {
-        alert("Este mes no tiene capitulos con este filtro.");
+        alert("Este mes no tiene enlaces directos de descarga con este filtro.");
         return;
       }
-      openMonthDownloads(monthKey, items);
+      const original = button.textContent;
+      button.disabled = true;
+      button.textContent = "Preparando...";
+      try {
+        const resolved = [];
+        for (let index = 0; index < items.length; index += 1) {
+          button.textContent = "Preparando " + (index + 1) + "/" + items.length;
+          const item = items[index];
+          const link = await resolveDownload(item);
+          if (link) resolved.push({ item, link });
+        }
+        if (!resolved.length) {
+          alert("No encontre archivos descargables para este mes.");
+          return;
+        }
+        button.textContent = "Descargando " + resolved.length;
+        resolved.forEach((entry, index) => {
+          setTimeout(() => triggerDownload(entry.link), index * 450);
+        });
+        openMonthDownloads(monthKey, items, resolved);
+      } catch {
+        alert("No pude preparar las descargas del mes. Revisa tu conexion e intenta otra vez.");
+      } finally {
+        button.disabled = false;
+        button.textContent = original;
+      }
     }
 
-    function openMonthDownloads(monthKey, items) {
+    function openMonthDownloads(monthKey, items, resolvedEntries = []) {
+      const resolvedMap = new Map(resolvedEntries.map(entry => [catalogKey(entry.item), entry.link]));
       const [year, month] = monthKey.split("-").map(Number);
       sheetTitleEl.textContent = "Descargar " + monthNames[month - 1] + " " + year;
       downloadListEl.innerHTML = "";
@@ -1287,9 +1317,13 @@
         const action = document.createElement("button");
         action.type = "button";
         action.className = canDownloadDirect(item) ? "media-btn download" : "media-btn disabled";
-        action.textContent = canDownloadDirect(item) ? "Descargar" : "Sin enlace";
+        action.textContent = canDownloadDirect(item) ? "Descargar otra vez" : "Sin enlace";
         action.disabled = !canDownloadDirect(item);
-        action.addEventListener("click", () => downloadDirect(item, action));
+        action.addEventListener("click", () => {
+          const cached = resolvedMap.get(catalogKey(item));
+          if (cached) triggerDownload(cached);
+          else downloadDirect(item, action);
+        });
         row.append(copy, action);
         downloadListEl.appendChild(row);
       });
@@ -1546,7 +1580,7 @@
         const action = document.createElement("button");
         action.type = "button";
         action.className = "month-action";
-        action.textContent = "Descargar mes";
+        action.textContent = "Descargar todo";
         action.disabled = !monthItems.length;
         action.title = readyCount + "/" + monthItems.length + " capitulos en SD";
         action.addEventListener("click", event => {
