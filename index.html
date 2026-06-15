@@ -205,7 +205,13 @@ function v1(o){let g;return g=o.match(/(\w{3,9})\.?\s+(\d{1,2}),\s*(\d{4})/),g&&
         localVideosInput.accept = "video/*,.mp4,.m4v,.mov,.webm,.mkv";
         localVideosInput.style.display = "none";
         localVideosInput.addEventListener("change", function () {
-          indexLocalVideoFiles(Array.from(localVideosInput.files || []));
+          const files = Array.from(localVideosInput.files || []);
+          indexLocalVideoFiles(files);
+          if (files.length === 1) {
+            playLocalVideoFile(files[0]);
+          } else if (files.length > 1) {
+            showToast("Listo: " + files.length + " videos seleccionados. Toca un capitulo con etiqueta SD.");
+          }
           localVideosInput.value = "";
         });
         document.addEventListener("click", strictDownloadClickGuard, true);
@@ -226,7 +232,7 @@ function v1(o){let g;return g=o.match(/(\w{3,9})\.?\s+(\d{1,2}),\s*(\d{4})/),g&&
           clearTimeout(toastTimer);
           toastTimer = setTimeout(function () {
             toast.style.opacity = "0";
-          }, 2600);
+          }, 4200);
         }
 
         function isAppleMobile() {
@@ -499,7 +505,7 @@ function v1(o){let g;return g=o.match(/(\w{3,9})\.?\s+(\d{1,2}),\s*(\d{4})/),g&&
           const panel = document.getElementById("wwe-local-library-panel");
           if (!panel) return;
           const status = panel.querySelector("[data-local-status]");
-          if (status) status.textContent = localVideoCount ? localVideoCount + " locales" : (isAppleMobile() ? "elige videos" : "elige carpeta");
+          if (status) status.textContent = localVideoCount ? localVideoCount + " locales" : "elige videos";
           panel.classList.toggle("has-local-videos", localVideoCount > 0);
         }
 
@@ -641,30 +647,74 @@ function v1(o){let g;return g=o.match(/(\w{3,9})\.?\s+(\d{1,2}),\s*(\d{4})/),g&&
           playerOverlay.style.display = "none";
         }
 
+        function isIphonePlayableLocalFile(file) {
+          return /\.(mp4|m4v|mov)$/i.test((file && file.name) || "");
+        }
+
+        function playLocalVideoFile(file) {
+          if (!file) return false;
+          if (isAppleMobile() && !isIphonePlayableLocalFile(file)) {
+            showToast("iPhone no reproduce este formato. Usa MP4, M4V o MOV para verlo local.");
+            alert("iPhone no puede reproducir este archivo localmente. Convierte o descarga el capitulo en MP4/M4V/MOV.");
+            return false;
+          }
+          const video = playerOverlay.querySelector("#iphone-native-video");
+          const title = playerOverlay.querySelector("#iphone-player-title");
+          const source = playerOverlay.querySelector("#iphone-player-source");
+          if (!video) return false;
+          if (currentLocalVideoUrl) {
+            URL.revokeObjectURL(currentLocalVideoUrl);
+            currentLocalVideoUrl = "";
+          }
+          currentLocalVideoUrl = URL.createObjectURL(file);
+          if (title) title.textContent = file.name || "Video local";
+          if (source) {
+            source.textContent = "LOCAL · sin datos";
+            source.className = "iphone-player-source iphone-player-source-local";
+          }
+          video.src = currentLocalVideoUrl;
+          video.controls = true;
+          video.style.display = "block";
+          video.preload = "metadata";
+          playerOverlay.style.display = "flex";
+          showToast("LOCAL: reproduciendo el archivo seleccionado sin datos.");
+          try {
+            const playPromise = video.play();
+            if (playPromise && typeof playPromise.catch === "function") {
+              playPromise.catch(function () {});
+            }
+          } catch {}
+          return true;
+        }
+
         async function showInlinePlayer(card) {
           const localFile = findLocalVideoFile(card);
-          const url = localFile ? URL.createObjectURL(localFile) : getEpisodeUrl(card);
+          if (localFile && isAppleMobile() && !isIphonePlayableLocalFile(localFile)) {
+            showToast("Ese archivo local no se puede reproducir en iPhone. Uso Archive.");
+          }
+          const playableLocalFile = localFile && (!isAppleMobile() || isIphonePlayableLocalFile(localFile)) ? localFile : null;
+          const url = playableLocalFile ? URL.createObjectURL(playableLocalFile) : getEpisodeUrl(card);
           if (!url) return false;
           const video = playerOverlay.querySelector("#iphone-native-video");
           const title = playerOverlay.querySelector("#iphone-player-title");
           const source = playerOverlay.querySelector("#iphone-player-source");
           if (title) title.textContent = getEpisodeTitle(card);
           if (source) {
-            source.textContent = localFile ? "LOCAL · sin datos" : "ARCHIVE · usa datos";
-            source.className = "iphone-player-source " + (localFile ? "iphone-player-source-local" : "iphone-player-source-archive");
+            source.textContent = playableLocalFile ? "LOCAL · sin datos" : "ARCHIVE · usa datos";
+            source.className = "iphone-player-source " + (playableLocalFile ? "iphone-player-source-local" : "iphone-player-source-archive");
           }
           if (!video) return false;
           if (currentLocalVideoUrl) {
             URL.revokeObjectURL(currentLocalVideoUrl);
             currentLocalVideoUrl = "";
           }
-          if (localFile) currentLocalVideoUrl = url;
+          if (playableLocalFile) currentLocalVideoUrl = url;
           video.src = url;
           video.controls = true;
           video.style.display = "block";
           video.preload = "metadata";
           playerOverlay.style.display = "flex";
-          showToast(localFile ? "LOCAL: reproduciendo sin datos desde microSD." : "ARCHIVE: reproduciendo desde internet.");
+          showToast(playableLocalFile ? "LOCAL: reproduciendo sin datos desde microSD." : "ARCHIVE: reproduciendo desde internet.");
           try {
             const playPromise = video.play();
             if (playPromise && typeof playPromise.catch === "function") {
