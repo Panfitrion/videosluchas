@@ -1,0 +1,1304 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>WWE Checklist Calendar 2021-2026</title>
+  <style>
+    :root {
+      color-scheme: dark;
+      --bg: #07090f;
+      --panel: #101522;
+      --panel-2: #151b2b;
+      --line: rgba(148, 163, 184, .22);
+      --text: #f8fafc;
+      --muted: #94a3b8;
+      --raw: #ef4444;
+      --sd: #3b82f6;
+      --ppv: #f59e0b;
+      --ok: #22c55e;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      background: var(--bg);
+      color: var(--text);
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      letter-spacing: 0;
+    }
+
+    button, input {
+      font: inherit;
+    }
+
+    .app {
+      min-height: 100vh;
+      display: grid;
+      grid-template-columns: 104px minmax(0, 1fr);
+    }
+
+    aside {
+      position: sticky;
+      top: 0;
+      height: 100vh;
+      border-right: 1px solid rgba(239, 68, 68, .24);
+      background: #090d16;
+      padding: 14px 10px;
+      overflow: auto;
+    }
+
+    .brand {
+      display: grid;
+      gap: 2px;
+      margin-bottom: 16px;
+      padding: 8px;
+    }
+
+    .brand strong {
+      font-size: 20px;
+      line-height: 1;
+      font-weight: 950;
+    }
+
+    .brand span {
+      color: var(--muted);
+      font-size: 11px;
+      font-weight: 750;
+      text-transform: uppercase;
+    }
+
+    .years {
+      display: grid;
+      gap: 8px;
+      flex-shrink: 0;
+    }
+
+    .year-btn {
+      width: 100%;
+      min-height: 42px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: rgba(15, 23, 42, .72);
+      color: #cbd5e1;
+      cursor: pointer;
+      font-weight: 900;
+    }
+
+    .year-btn.active {
+      border-color: rgba(245, 158, 11, .7);
+      background: #f59e0b;
+      color: #111827;
+      box-shadow: 0 14px 34px rgba(245, 158, 11, .2);
+    }
+
+    main {
+      min-width: 0;
+      padding: 18px;
+    }
+
+    .topbar {
+      position: sticky;
+      top: 0;
+      z-index: 20;
+      margin: -18px -18px 18px;
+      padding: 14px 18px;
+      border-bottom: 1px solid rgba(148, 163, 184, .16);
+      background: rgba(7, 9, 15, .92);
+      backdrop-filter: blur(10px);
+    }
+
+    .topline {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 14px;
+      margin-bottom: 12px;
+    }
+
+    h1 {
+      margin: 0;
+      font-size: clamp(26px, 3vw, 42px);
+      line-height: 1;
+      font-weight: 950;
+    }
+
+    .subtitle {
+      margin: 6px 0 0;
+      color: var(--muted);
+      font-size: 13px;
+      font-weight: 650;
+    }
+
+    .stats {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      flex-wrap: wrap;
+      justify-content: flex-end;
+    }
+
+    .stat {
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: rgba(15, 23, 42, .72);
+      padding: 8px 10px;
+      min-width: 86px;
+    }
+
+    .stat b {
+      display: block;
+      font-size: 17px;
+      line-height: 1;
+    }
+
+    .stat span {
+      display: block;
+      margin-top: 3px;
+      color: var(--muted);
+      font-size: 10px;
+      font-weight: 800;
+      text-transform: uppercase;
+    }
+
+    .controls {
+      display: grid;
+      grid-template-columns: minmax(180px, 1fr) auto auto auto;
+      gap: 10px;
+      align-items: center;
+    }
+
+    .search {
+      width: 100%;
+      min-height: 40px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: rgba(15, 23, 42, .72);
+      color: var(--text);
+      padding: 0 12px;
+      outline: none;
+    }
+
+    .search:focus {
+      border-color: rgba(245, 158, 11, .58);
+    }
+
+    .segments {
+      display: flex;
+      gap: 4px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 4px;
+      background: rgba(15, 23, 42, .72);
+    }
+
+    .seg {
+      min-height: 32px;
+      border: 0;
+      border-radius: 6px;
+      background: transparent;
+      color: #cbd5e1;
+      cursor: pointer;
+      padding: 0 10px;
+      font-size: 12px;
+      font-weight: 900;
+    }
+
+    .seg.active {
+      color: #111827;
+      background: #f59e0b;
+    }
+
+    .toggle {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      min-height: 40px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 0 10px;
+      background: rgba(15, 23, 42, .72);
+      color: #cbd5e1;
+      white-space: nowrap;
+      font-size: 12px;
+      font-weight: 850;
+    }
+
+    .toggle input {
+      width: 16px;
+      height: 16px;
+      accent-color: var(--ok);
+    }
+
+    .home {
+      display: grid;
+      grid-template-columns: minmax(0, 1.35fr) minmax(260px, .65fr);
+      gap: 14px;
+      margin-bottom: 18px;
+    }
+
+    .panel {
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: linear-gradient(180deg, rgba(21, 27, 43, .94), rgba(12, 17, 28, .94));
+      padding: 15px;
+    }
+
+    .panel h2 {
+      margin: 0 0 10px;
+      font-size: 14px;
+      font-weight: 950;
+      color: #facc15;
+      text-transform: uppercase;
+    }
+
+    .last-title {
+      margin: 0;
+      font-size: 18px;
+      font-weight: 950;
+      line-height: 1.25;
+    }
+
+    .last-meta {
+      margin: 8px 0 0;
+      color: var(--muted);
+      font-size: 13px;
+      font-weight: 700;
+    }
+
+    .progress-line {
+      height: 8px;
+      background: rgba(148, 163, 184, .18);
+      border-radius: 999px;
+      overflow: hidden;
+      margin-top: 12px;
+    }
+
+    .progress-fill {
+      height: 100%;
+      width: 0%;
+      background: linear-gradient(90deg, #22c55e, #f59e0b);
+      border-radius: inherit;
+      transition: width .2s ease;
+    }
+
+    .month-stack {
+      display: grid;
+      gap: 12px;
+    }
+
+    details.month {
+      border: 1px solid rgba(148, 163, 184, .18);
+      border-radius: 8px;
+      background: rgba(15, 23, 42, .62);
+      overflow: hidden;
+    }
+
+    details.month[open] {
+      border-color: rgba(245, 158, 11, .42);
+    }
+
+    summary {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      padding: 13px 14px;
+      cursor: pointer;
+      list-style: none;
+      background: rgba(21, 27, 43, .8);
+    }
+
+    summary::-webkit-details-marker {
+      display: none;
+    }
+
+    .month-name {
+      font-size: 15px;
+      font-weight: 950;
+      color: #facc15;
+      text-transform: uppercase;
+    }
+
+    .month-count {
+      color: #cbd5e1;
+      font-size: 12px;
+      font-weight: 850;
+      white-space: nowrap;
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(1, minmax(0, 1fr));
+      gap: 10px;
+      padding: 12px;
+    }
+
+    .card {
+      min-height: 118px;
+      display: grid;
+      grid-template-rows: auto 1fr auto auto;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: rgba(7, 9, 15, .62);
+      padding: 12px;
+    }
+
+    .card.raw { border-color: rgba(239, 68, 68, .3); }
+    .card.smackdown { border-color: rgba(59, 130, 246, .35); }
+    .card.ppv { border-color: rgba(245, 158, 11, .38); }
+
+    .card-head {
+      display: flex;
+      justify-content: space-between;
+      gap: 10px;
+      align-items: center;
+    }
+
+    .badge {
+      border-radius: 999px;
+      padding: 5px 8px;
+      font-size: 11px;
+      font-weight: 950;
+      line-height: 1;
+    }
+
+    .badge.raw { background: rgba(239, 68, 68, .16); color: #fecaca; }
+    .badge.smackdown { background: rgba(59, 130, 246, .16); color: #bfdbfe; }
+    .badge.ppv { background: rgba(245, 158, 11, .18); color: #fde68a; }
+
+    .date {
+      color: var(--muted);
+      font-size: 12px;
+      font-weight: 850;
+    }
+
+    .status-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      border: 1px solid var(--line);
+      border-radius: 999px;
+      padding: 5px 7px;
+      color: #cbd5e1;
+      font-size: 10px;
+      font-weight: 950;
+      line-height: 1;
+      white-space: nowrap;
+    }
+
+    .status-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 999px;
+      background: #64748b;
+    }
+
+    .status-pill.downloaded {
+      border-color: rgba(34, 197, 94, .45);
+      color: #bbf7d0;
+      background: rgba(34, 197, 94, .12);
+    }
+
+    .status-pill.downloaded .status-dot { background: var(--ok); }
+    .status-pill.active .status-dot { background: var(--ppv); }
+    .status-pill.missing .status-dot { background: #ef4444; }
+
+    .card-title {
+      margin: 12px 0;
+      font-size: 15px;
+      font-weight: 900;
+      line-height: 1.25;
+    }
+
+    .seen {
+      min-height: 38px;
+      border: 0;
+      border-radius: 8px;
+      background: var(--ok);
+      color: #052e16;
+      cursor: pointer;
+      font-weight: 950;
+    }
+
+    .seen.undo {
+      background: rgba(148, 163, 184, .18);
+      color: #e2e8f0;
+      border: 1px solid var(--line);
+    }
+
+    .actions {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+      margin-top: 8px;
+    }
+
+    .media-btn {
+      min-height: 36px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: rgba(15, 23, 42, .88);
+      color: #e2e8f0;
+      cursor: pointer;
+      text-decoration: none;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      font-size: 12px;
+      font-weight: 950;
+    }
+
+    .media-btn.primary {
+      border-color: rgba(34, 197, 94, .55);
+      background: rgba(34, 197, 94, .16);
+      color: #bbf7d0;
+    }
+
+    .media-btn:disabled,
+    .media-btn.disabled {
+      opacity: .48;
+      cursor: not-allowed;
+    }
+
+    .sd-tools {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      min-height: 40px;
+      border: 1px solid rgba(34, 197, 94, .34);
+      border-radius: 8px;
+      background: rgba(34, 197, 94, .1);
+      color: #bbf7d0;
+      cursor: pointer;
+      padding: 0 10px;
+      white-space: nowrap;
+      font-size: 12px;
+      font-weight: 950;
+    }
+
+    .hidden-picker {
+      position: fixed;
+      width: 1px;
+      height: 1px;
+      opacity: 0;
+      pointer-events: none;
+    }
+
+    .empty {
+      border: 1px dashed rgba(148, 163, 184, .28);
+      border-radius: 8px;
+      padding: 34px 18px;
+      text-align: center;
+      color: var(--muted);
+      font-weight: 750;
+    }
+
+    @media (min-width: 720px) {
+      .grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+    }
+
+    @media (min-width: 1080px) {
+      .grid {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+      }
+    }
+
+    @media (min-width: 1360px) {
+      .grid {
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+      }
+    }
+
+    @media (max-width: 760px) {
+      .app {
+        grid-template-columns: 1fr;
+      }
+
+      aside {
+        position: sticky;
+        top: 0;
+        z-index: 30;
+        height: auto;
+        border-right: 0;
+        border-bottom: 1px solid rgba(239, 68, 68, .24);
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        overflow-x: auto;
+      }
+
+      .brand {
+        min-width: 72px;
+        margin-bottom: 0;
+      }
+
+      .years {
+        grid-auto-flow: column;
+        grid-auto-columns: 72px;
+        width: max-content;
+      }
+
+      main {
+        padding: 14px;
+      }
+
+      .topbar {
+        position: static;
+        margin: -14px -14px 14px;
+      }
+
+      .topline,
+      .home {
+        grid-template-columns: 1fr;
+        display: grid;
+      }
+
+      .stats {
+        justify-content: start;
+      }
+
+      .controls {
+        grid-template-columns: 1fr;
+      }
+
+      .segments {
+        overflow-x: auto;
+      }
+
+      summary {
+        align-items: flex-start;
+        flex-direction: column;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <aside>
+      <div class="brand">
+        <strong>WWE</strong>
+        <span>Checklist</span>
+      </div>
+      <div class="years" id="years">
+        <button class="year-btn" type="button">2021</button>
+        <button class="year-btn" type="button">2022</button>
+        <button class="year-btn" type="button">2023</button>
+        <button class="year-btn" type="button">2024</button>
+        <button class="year-btn" type="button">2025</button>
+        <button class="year-btn active" type="button">2026</button>
+      </div>
+    </aside>
+
+    <main>
+      <div class="topbar">
+        <div class="topline">
+          <div>
+            <h1 id="heading">Calendario WWE</h1>
+            <p class="subtitle" id="subtitle">RAW, SmackDown y PPV/PLE de 2021 a 2026</p>
+          </div>
+          <div class="stats">
+            <div class="stat"><b id="pendingCount">0</b><span>Pendientes</span></div>
+            <div class="stat"><b id="seenCount">0</b><span>Vistos</span></div>
+            <div class="stat"><b id="downloadedCount">0</b><span>Descargados</span></div>
+            <div class="stat"><b id="totalCount">0</b><span>Total</span></div>
+          </div>
+        </div>
+        <div class="controls">
+          <input class="search" id="search" type="search" placeholder="Buscar por programa, fecha o PPV">
+          <div class="segments" id="filters">
+            <button class="seg active" data-filter="ALL" type="button">TODO</button>
+            <button class="seg" data-filter="RAW" type="button">RAW</button>
+            <button class="seg" data-filter="SMACKDOWN" type="button">SMACKDOWN</button>
+            <button class="seg" data-filter="PPV" type="button">PPV</button>
+          </div>
+          <button class="sd-tools" id="importSd" type="button">Importar SD</button>
+          <label class="toggle">
+            <input id="showSeen" type="checkbox">
+            Mostrar vistos
+          </label>
+        </div>
+      </div>
+
+      <section class="home">
+        <div class="panel">
+          <h2>Ultimo capitulo visto</h2>
+          <p class="last-title" id="lastTitle">Todavia no has marcado ningun capitulo.</p>
+          <p class="last-meta" id="lastMeta">Cuando marques uno como visto, aparecera aqui.</p>
+        </div>
+        <div class="panel">
+          <h2>Progreso del ano</h2>
+          <p class="last-title" id="progressText">0%</p>
+          <p class="last-meta" id="progressMeta">Selecciona un ano para empezar.</p>
+          <div class="progress-line"><div class="progress-fill" id="progressFill"></div></div>
+        </div>
+      </section>
+
+      <section id="calendar" class="month-stack"></section>
+      <input class="hidden-picker" id="sdPicker" type="file" accept="video/*,.mp4,.mkv,.mov" multiple>
+    </main>
+  </div>
+
+  <script>
+    const YEARS = [2021, 2022, 2023, 2024, 2025, 2026];
+    const STORAGE_SEEN = "wwe_calendar_seen_v1";
+    const STORAGE_LAST = "wwe_calendar_last_seen_v1";
+    const STORAGE_YEAR = "wwe_calendar_year_v1";
+    const STORAGE_SD = "wwe_calendar_sd_library_v1";
+    const USE_SERVER = location.protocol === "file:" || ["localhost", "127.0.0.1"].includes(location.hostname);
+    const API_BASE = location.protocol === "file:" ? "http://localhost:8787" : "";
+
+    const monthNames = [
+      "Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio",
+      "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"
+    ];
+
+    const ppvEvents = [
+      ["2021-01-31", "Royal Rumble"],
+      ["2021-02-21", "Elimination Chamber"],
+      ["2021-03-21", "Fastlane"],
+      ["2021-04-10", "WrestleMania 37 Night 1"],
+      ["2021-04-11", "WrestleMania 37 Night 2"],
+      ["2021-05-16", "WrestleMania Backlash"],
+      ["2021-06-20", "Hell in a Cell"],
+      ["2021-07-18", "Money in the Bank"],
+      ["2021-08-21", "SummerSlam"],
+      ["2021-09-26", "Extreme Rules"],
+      ["2021-10-21", "Crown Jewel"],
+      ["2021-11-21", "Survivor Series"],
+      ["2022-01-01", "Day 1"],
+      ["2022-01-29", "Royal Rumble"],
+      ["2022-02-19", "Elimination Chamber"],
+      ["2022-04-02", "WrestleMania 38 Night 1"],
+      ["2022-04-03", "WrestleMania 38 Night 2"],
+      ["2022-05-08", "WrestleMania Backlash"],
+      ["2022-06-05", "Hell in a Cell"],
+      ["2022-07-02", "Money in the Bank"],
+      ["2022-07-30", "SummerSlam"],
+      ["2022-09-03", "Clash at the Castle"],
+      ["2022-10-08", "Extreme Rules"],
+      ["2022-11-05", "Crown Jewel"],
+      ["2022-11-26", "Survivor Series WarGames"],
+      ["2023-01-28", "Royal Rumble"],
+      ["2023-02-18", "Elimination Chamber"],
+      ["2023-04-01", "WrestleMania 39 Night 1"],
+      ["2023-04-02", "WrestleMania 39 Night 2"],
+      ["2023-05-06", "Backlash"],
+      ["2023-05-27", "Night of Champions"],
+      ["2023-07-01", "Money in the Bank"],
+      ["2023-08-05", "SummerSlam"],
+      ["2023-09-02", "Payback"],
+      ["2023-10-07", "Fastlane"],
+      ["2023-11-04", "Crown Jewel"],
+      ["2023-11-25", "Survivor Series WarGames"],
+      ["2024-01-27", "Royal Rumble"],
+      ["2024-02-24", "Elimination Chamber"],
+      ["2024-04-06", "WrestleMania XL Night 1"],
+      ["2024-04-07", "WrestleMania XL Night 2"],
+      ["2024-05-04", "Backlash France"],
+      ["2024-05-25", "King and Queen of the Ring"],
+      ["2024-06-15", "Clash at the Castle Scotland"],
+      ["2024-07-06", "Money in the Bank"],
+      ["2024-08-03", "SummerSlam"],
+      ["2024-08-31", "Bash in Berlin"],
+      ["2024-10-05", "Bad Blood"],
+      ["2024-11-02", "Crown Jewel"],
+      ["2024-11-30", "Survivor Series WarGames"],
+      ["2024-12-14", "Saturday Night's Main Event"],
+      ["2025-01-06", "Raw on Netflix Premiere"],
+      ["2025-01-25", "Saturday Night's Main Event"],
+      ["2025-02-01", "Royal Rumble"],
+      ["2025-03-01", "Elimination Chamber"],
+      ["2025-04-19", "WrestleMania 41 Night 1"],
+      ["2025-04-20", "WrestleMania 41 Night 2"],
+      ["2025-05-10", "Backlash"],
+      ["2025-05-24", "Saturday Night's Main Event"],
+      ["2025-05-31", "Money in the Bank"],
+      ["2025-06-07", "Worlds Collide"],
+      ["2025-06-28", "Night of Champions"],
+      ["2025-07-12", "Saturday Night's Main Event"],
+      ["2025-07-12", "Evolution"],
+      ["2025-08-02", "SummerSlam Night 1"],
+      ["2025-08-03", "SummerSlam Night 2"],
+      ["2025-08-31", "Clash in Paris"],
+      ["2025-09-20", "Wrestlepalooza"],
+      ["2025-11-01", "Saturday Night's Main Event"],
+      ["2025-11-01", "Crown Jewel"],
+      ["2025-11-29", "Survivor Series WarGames"],
+      ["2025-12-13", "Saturday Night's Main Event"],
+      ["2026-01-24", "Saturday Night's Main Event"],
+      ["2026-01-31", "Royal Rumble"],
+      ["2026-02-28", "Elimination Chamber"],
+      ["2026-04-18", "WrestleMania 42 Night 1"],
+      ["2026-04-19", "WrestleMania 42 Night 2"],
+      ["2026-05-23", "Saturday Night's Main Event"]
+    ];
+
+    const memoryStorage = {};
+
+    function safeGet(key) {
+      try {
+        return window.localStorage.getItem(key);
+      } catch {
+        return memoryStorage[key] || null;
+      }
+    }
+
+    function safeSet(key, value) {
+      memoryStorage[key] = String(value);
+      try {
+        window.localStorage.setItem(key, value);
+      } catch {}
+    }
+
+    let selectedYear = Number(safeGet(STORAGE_YEAR)) || 2026;
+    if (!YEARS.includes(selectedYear)) selectedYear = 2026;
+    let activeFilter = "ALL";
+    let showSeen = false;
+    let query = "";
+    let seen = readSeen();
+    let downloads = new Map();
+    let sdLibrary = readSdLibrary();
+    let sessionFiles = new Map();
+    let pendingPickItem = null;
+    let serverOnline = false;
+    let refreshTimer = null;
+
+    const yearsEl = document.getElementById("years");
+    const calendarEl = document.getElementById("calendar");
+    const headingEl = document.getElementById("heading");
+    const subtitleEl = document.getElementById("subtitle");
+    const searchEl = document.getElementById("search");
+    const showSeenEl = document.getElementById("showSeen");
+    const sdPickerEl = document.getElementById("sdPicker");
+
+    function readSeen() {
+      try {
+        return new Set(JSON.parse(safeGet(STORAGE_SEEN) || "[]"));
+      } catch {
+        return new Set();
+      }
+    }
+
+    function saveSeen() {
+      safeSet(STORAGE_SEEN, JSON.stringify(Array.from(seen)));
+    }
+
+    function readSdLibrary() {
+      try {
+        return JSON.parse(safeGet(STORAGE_SD) || "{}");
+      } catch {
+        return {};
+      }
+    }
+
+    function saveSdLibrary() {
+      safeSet(STORAGE_SD, JSON.stringify(sdLibrary));
+    }
+
+    function parseDate(iso) {
+      const [year, month, day] = iso.split("-").map(Number);
+      return new Date(Date.UTC(year, month - 1, day, 12));
+    }
+
+    function isoDate(date) {
+      return date.toISOString().slice(0, 10);
+    }
+
+    function addDays(date, days) {
+      const next = new Date(date);
+      next.setUTCDate(next.getUTCDate() + days);
+      return next;
+    }
+
+    function dayName(iso) {
+      return parseDate(iso).toLocaleDateString("es-MX", { weekday: "long", timeZone: "UTC" });
+    }
+
+    function longDate(iso) {
+      return parseDate(iso).toLocaleDateString("es-MX", {
+        day: "numeric",
+        month: "long",
+        year: "numeric",
+        timeZone: "UTC"
+      });
+    }
+
+    function shortDate(iso) {
+      return parseDate(iso).toLocaleDateString("es-MX", {
+        day: "2-digit",
+        month: "short",
+        timeZone: "UTC"
+      });
+    }
+
+    function idFor(type, iso, name) {
+      return [type, iso, name].join("::").toLowerCase().replace(/[^a-z0-9:]+/g, "-");
+    }
+
+    function catalogKey(item) {
+      return item.type + "::" + item.date;
+    }
+
+    function apiUrl(path) {
+      return API_BASE + path;
+    }
+
+    function taskForItem(item) {
+      return downloads.get(catalogKey(item)) || null;
+    }
+
+    function sdRecordForItem(item) {
+      return sdLibrary[catalogKey(item)] || null;
+    }
+
+    function hasLocalFile(item) {
+      return Boolean(sdRecordForItem(item) || sessionFiles.has(catalogKey(item)));
+    }
+
+    async function refreshDownloads() {
+      if (!USE_SERVER) {
+        serverOnline = false;
+        return;
+      }
+      try {
+        const res = await fetch(apiUrl("/api/downloads"), { cache: "no-store" });
+        const data = await res.json();
+        downloads = new Map();
+        (data.items || []).forEach(task => {
+          if (task.catalogKey) downloads.set(task.catalogKey, task);
+        });
+        serverOnline = true;
+      } catch {
+        serverOnline = false;
+      }
+      render();
+      const active = Array.from(downloads.values()).some(task => task.status === "queued" || task.status === "downloading");
+      clearTimeout(refreshTimer);
+      refreshTimer = setTimeout(refreshDownloads, active ? 1800 : 7000);
+    }
+
+    function normalizeText(value) {
+      return String(value || "")
+        .normalize("NFD")
+        .replace(/[\u0300-\u036f]/g, "")
+        .toLowerCase();
+    }
+
+    function dateTokens(iso) {
+      const [year, month, day] = iso.split("-");
+      const monthName = normalizeText(monthNames[Number(month) - 1]);
+      return [
+        iso,
+        iso.replaceAll("-", "."),
+        month + "-" + day + "-" + year,
+        month + "." + day + "." + year,
+        day + "-" + month + "-" + year,
+        day + "." + month + "." + year,
+        Number(day) + " de " + monthName + " de " + year,
+        Number(day) + " de " + monthName + " del " + year
+      ];
+    }
+
+    function fileMatchesItem(file, item) {
+      const name = normalizeText(file.name);
+      const typeNeedle = item.type === "SMACKDOWN" ? "smackdown" : item.type.toLowerCase();
+      const typeMatches = item.type === "PPV" ? normalizeText(item.title).split(/\s+/).filter(Boolean).some(part => name.includes(part)) : name.includes(typeNeedle);
+      if (!typeMatches) return false;
+      return dateTokens(item.date).some(token => name.includes(normalizeText(token)));
+    }
+
+    function findItemForFile(file) {
+      for (const year of YEARS) {
+        const match = allItemsForYear(year).find(item => fileMatchesItem(file, item));
+        if (match) return match;
+      }
+      return null;
+    }
+
+    function rememberFileForItem(file, item) {
+      const key = catalogKey(item);
+      sessionFiles.set(key, file);
+      sdLibrary[key] = {
+        name: file.name,
+        size: file.size || 0,
+        lastModified: file.lastModified || 0,
+        addedAt: Date.now()
+      };
+    }
+
+    function handleSdFiles(files) {
+      const list = Array.from(files || []);
+      let matched = 0;
+      if (pendingPickItem && list.length) {
+        rememberFileForItem(list[0], pendingPickItem);
+        openLocalFile(pendingPickItem);
+        pendingPickItem = null;
+        saveSdLibrary();
+        render();
+        sdPickerEl.value = "";
+        return;
+      }
+      list.forEach(file => {
+        const item = findItemForFile(file);
+        if (!item) return;
+        rememberFileForItem(file, item);
+        matched += 1;
+      });
+      saveSdLibrary();
+      render();
+      sdPickerEl.value = "";
+      if (!matched && list.length) alert("No pude empatar esos archivos con el calendario. Prueba elegir el video desde la tarjeta exacta.");
+    }
+
+    function pickFileForItem(item) {
+      pendingPickItem = item;
+      sdPickerEl.multiple = false;
+      sdPickerEl.click();
+    }
+
+    function importSdFiles() {
+      pendingPickItem = null;
+      sdPickerEl.multiple = true;
+      sdPickerEl.click();
+    }
+
+    function openLocalFile(item) {
+      const file = sessionFiles.get(catalogKey(item));
+      if (!file) {
+        pickFileForItem(item);
+        return;
+      }
+      const url = URL.createObjectURL(file);
+      seen.add(item.id);
+      setLastSeen(item);
+      saveSeen();
+      window.open(url, "_blank");
+      setTimeout(() => URL.revokeObjectURL(url), 60000);
+    }
+
+    async function startDownload(item, button) {
+      button.disabled = true;
+      button.textContent = "Preparando...";
+      try {
+        const res = await fetch(apiUrl("/api/download"), {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            show: item.type,
+            date: item.date,
+            title: item.title
+          })
+        });
+        const data = await res.json();
+        if (data.error) alert(data.error);
+      } catch {
+        alert("No pude conectar con el servidor local. Abre start.command en la carpeta wwe server.");
+      }
+      await refreshDownloads();
+    }
+
+    function generateWeekly(type, weekday, year) {
+      const start = parseDate(year + "-01-01");
+      const end = parseDate(year + "-12-31");
+      const items = [];
+      let current = start;
+      while (current.getUTCDay() !== weekday) current = addDays(current, 1);
+      while (current <= end) {
+        const iso = isoDate(current);
+        const label = type === "RAW" ? "RAW" : "SmackDown";
+        items.push({
+          id: idFor(type, iso, label),
+          type,
+          date: iso,
+          title: label + " - " + longDate(iso),
+          sort: iso + "-" + (type === "RAW" ? "1" : "2")
+        });
+        current = addDays(current, 7);
+      }
+      return items;
+    }
+
+    function allItemsForYear(year) {
+      const raw = generateWeekly("RAW", 1, year);
+      const sd = generateWeekly("SMACKDOWN", 5, year);
+      const ppv = ppvEvents
+        .filter(([iso]) => iso.startsWith(String(year)))
+        .map(([iso, name]) => ({
+          id: idFor("PPV", iso, name),
+          type: "PPV",
+          date: iso,
+          title: name,
+          sort: iso + "-0"
+        }));
+      return [...raw, ...sd, ...ppv].sort((a, b) => a.sort.localeCompare(b.sort));
+    }
+
+    function visibleItems(items) {
+      const needle = query.trim().toLowerCase();
+      return items.filter(item => {
+        if (activeFilter !== "ALL" && item.type !== activeFilter) return false;
+        if (!showSeen && seen.has(item.id)) return false;
+        if (!needle) return true;
+        return [
+          item.title,
+          item.type,
+          item.date,
+          longDate(item.date),
+          dayName(item.date)
+        ].join(" ").toLowerCase().includes(needle);
+      });
+    }
+
+    function renderYears() {
+      yearsEl.innerHTML = "";
+      YEARS.forEach(year => {
+        const button = document.createElement("button");
+        button.type = "button";
+        button.className = "year-btn" + (year === selectedYear ? " active" : "");
+        button.textContent = year;
+        button.addEventListener("click", () => {
+          selectedYear = year;
+          safeSet(STORAGE_YEAR, String(year));
+          render();
+        });
+        yearsEl.appendChild(button);
+      });
+    }
+
+    function setLastSeen(item) {
+      const record = {
+        id: item.id,
+        type: item.type,
+        title: item.title,
+        date: item.date,
+        at: new Date().toISOString()
+      };
+      safeSet(STORAGE_LAST, JSON.stringify(record));
+    }
+
+    function readLastSeen() {
+      try {
+        return JSON.parse(safeGet(STORAGE_LAST) || "null");
+      } catch {
+        return null;
+      }
+    }
+
+    function renderHome(allItems) {
+      const last = readLastSeen();
+      const lastTitle = document.getElementById("lastTitle");
+      const lastMeta = document.getElementById("lastMeta");
+      if (last) {
+        lastTitle.textContent = last.title;
+        lastMeta.textContent = last.typeLabel || labelForType(last.type) + " - " + longDate(last.date) + " - marcado " + new Date(last.at).toLocaleString("es-MX");
+      } else {
+        lastTitle.textContent = "Todavia no has marcado ningun capitulo.";
+        lastMeta.textContent = "Cuando marques uno como visto, aparecera aqui.";
+      }
+
+      const total = allItems.length;
+      const seenCount = allItems.filter(item => seen.has(item.id)).length;
+      const pending = total - seenCount;
+      const percent = total ? Math.round((seenCount / total) * 100) : 0;
+
+      document.getElementById("pendingCount").textContent = pending;
+      document.getElementById("seenCount").textContent = seenCount;
+      document.getElementById("downloadedCount").textContent = allItems.filter(item => {
+        const task = taskForItem(item);
+        return (task && task.status === "completed") || hasLocalFile(item);
+      }).length;
+      document.getElementById("totalCount").textContent = total;
+      document.getElementById("progressText").textContent = percent + "%";
+      document.getElementById("progressMeta").textContent = seenCount + " de " + total + " eventos marcados en " + selectedYear;
+      document.getElementById("progressFill").style.width = percent + "%";
+    }
+
+    function labelForType(type) {
+      if (type === "SMACKDOWN") return "SmackDown";
+      if (type === "PPV") return "PPV/PLE";
+      return "RAW";
+    }
+
+    function typeClass(type) {
+      return type === "SMACKDOWN" ? "smackdown" : type.toLowerCase();
+    }
+
+    function groupByMonth(items) {
+      const groups = new Map();
+      items.forEach(item => {
+        const key = item.date.slice(0, 7);
+        if (!groups.has(key)) groups.set(key, []);
+        groups.get(key).push(item);
+      });
+      return groups;
+    }
+
+    function renderCard(item) {
+      const card = document.createElement("article");
+      const isSeen = seen.has(item.id);
+      card.className = "card " + typeClass(item.type);
+
+      const head = document.createElement("div");
+      head.className = "card-head";
+      const badge = document.createElement("span");
+      badge.className = "badge " + typeClass(item.type);
+      badge.textContent = labelForType(item.type);
+      const right = document.createElement("div");
+      right.style.display = "flex";
+      right.style.alignItems = "center";
+      right.style.gap = "6px";
+      const status = document.createElement("span");
+      const task = taskForItem(item);
+      const downloaded = (task && task.status === "completed") || hasLocalFile(item);
+      const active = task && (task.status === "queued" || task.status === "downloading");
+      status.className = "status-pill " + (downloaded ? "downloaded" : active ? "active" : "missing");
+      status.innerHTML = '<span class="status-dot"></span>' + (downloaded ? "SD" : active ? Math.round(task.progress || 0) + "%" : "No SD");
+      const date = document.createElement("span");
+      date.className = "date";
+      date.textContent = shortDate(item.date);
+      right.append(status, date);
+      head.append(badge, right);
+
+      const title = document.createElement("p");
+      title.className = "card-title";
+      title.textContent = item.title;
+
+      const button = document.createElement("button");
+      button.type = "button";
+      button.className = "seen" + (isSeen ? " undo" : "");
+      button.textContent = isSeen ? "Quitar visto" : "Marcar visto";
+      button.addEventListener("click", () => {
+        if (seen.has(item.id)) {
+          seen.delete(item.id);
+        } else {
+          seen.add(item.id);
+          setLastSeen(item);
+        }
+        saveSeen();
+        render();
+      });
+
+      const actions = document.createElement("div");
+      actions.className = "actions";
+      const downloadBtn = document.createElement("button");
+      downloadBtn.type = "button";
+      downloadBtn.className = "media-btn primary";
+      downloadBtn.textContent = USE_SERVER ? (active ? "Descargando" : downloaded ? "Bajar otra vez" : "Descargar A2") : "Marcar SD";
+      downloadBtn.disabled = active || item.type === "PPV" && USE_SERVER;
+      downloadBtn.addEventListener("click", () => {
+        if (USE_SERVER) startDownload(item, downloadBtn);
+        else pickFileForItem(item);
+      });
+
+      if (downloaded && task.mediaUrl) {
+        const watch = document.createElement("a");
+        watch.className = "media-btn";
+        watch.href = apiUrl(task.mediaUrl);
+        watch.textContent = "Ver SD";
+        watch.addEventListener("click", () => {
+          seen.add(item.id);
+          setLastSeen(item);
+          saveSeen();
+        });
+        actions.append(downloadBtn, watch);
+      } else if (downloaded) {
+        const watch = document.createElement("button");
+        watch.type = "button";
+        watch.className = "media-btn";
+        watch.textContent = sessionFiles.has(catalogKey(item)) ? "Ver SD" : "Elegir video";
+        watch.addEventListener("click", () => openLocalFile(item));
+        actions.append(downloadBtn, watch);
+      } else {
+        const watch = document.createElement("button");
+        watch.type = "button";
+        watch.className = "media-btn disabled";
+        watch.disabled = USE_SERVER && !serverOnline;
+        watch.textContent = USE_SERVER ? (serverOnline ? "Sin archivo" : "Servidor off") : "Elegir video";
+        if (!USE_SERVER) {
+          watch.classList.remove("disabled");
+          watch.addEventListener("click", () => pickFileForItem(item));
+        }
+        actions.append(downloadBtn, watch);
+      }
+
+      card.append(head, title, button, actions);
+      return card;
+    }
+
+    function renderCalendar(items) {
+      calendarEl.innerHTML = "";
+      if (!items.length) {
+        const empty = document.createElement("div");
+        empty.className = "empty";
+        empty.textContent = "No hay elementos pendientes con estos filtros.";
+        calendarEl.appendChild(empty);
+        return;
+      }
+
+      const groups = groupByMonth(items);
+      Array.from(groups.keys()).sort().forEach((key, index) => {
+        const [year, month] = key.split("-").map(Number);
+        const details = document.createElement("details");
+        details.className = "month";
+        details.open = index === 0;
+
+        const summary = document.createElement("summary");
+        const name = document.createElement("span");
+        name.className = "month-name";
+        name.textContent = monthNames[month - 1] + " " + year;
+        const count = document.createElement("span");
+        count.className = "month-count";
+        count.textContent = groups.get(key).length + " visibles";
+        summary.append(name, count);
+
+        const grid = document.createElement("div");
+        grid.className = "grid";
+        groups.get(key).forEach(item => grid.appendChild(renderCard(item)));
+
+        details.append(summary, grid);
+        calendarEl.appendChild(details);
+      });
+    }
+
+    function render() {
+      const all = allItemsForYear(selectedYear);
+      const items = visibleItems(all);
+      headingEl.textContent = "Calendario WWE " + selectedYear;
+      subtitleEl.textContent = "RAW, SmackDown y PPV/PLE - " + (showSeen ? "mostrando vistos" : "ocultando vistos");
+      renderYears();
+      renderHome(all);
+      renderCalendar(items);
+    }
+
+    document.getElementById("filters").addEventListener("click", event => {
+      const button = event.target.closest("button[data-filter]");
+      if (!button) return;
+      activeFilter = button.dataset.filter;
+      document.querySelectorAll(".seg").forEach(seg => seg.classList.toggle("active", seg === button));
+      render();
+    });
+
+    searchEl.addEventListener("input", event => {
+      query = event.target.value;
+      render();
+    });
+
+    showSeenEl.addEventListener("change", event => {
+      showSeen = event.target.checked;
+      render();
+    });
+
+    document.getElementById("importSd").addEventListener("click", importSdFiles);
+    sdPickerEl.addEventListener("change", event => handleSdFiles(event.target.files));
+
+    render();
+    refreshDownloads();
+  </script>
+</body>
+</html>
