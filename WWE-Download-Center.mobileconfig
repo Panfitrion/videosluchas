@@ -1,0 +1,53 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+  <key>PayloadContent</key>
+  <array>
+    <dict>
+      <key>FullScreen</key>
+      <true/>
+      <key>IgnoreManifestScope</key>
+      <true/>
+      <key>IsRemovable</key>
+      <true/>
+      <key>Label</key>
+      <string>WWE Download Center</string>
+      <key>PayloadDescription</key>
+      <string>Instala WWE Download Center como Web Clip.</string>
+      <key>PayloadDisplayName</key>
+      <string>WWE Download Center</string>
+      <key>PayloadIdentifier</key>
+      <string>com.panfitrion.videosluchas.webclip</string>
+      <key>PayloadOrganization</key>
+      <string>Panfitrion</string>
+      <key>PayloadType</key>
+      <string>com.apple.webClip.managed</string>
+      <key>PayloadUUID</key>
+      <string>8A9F580B-A6D6-43D5-A081-06B0659AA6D6</string>
+      <key>PayloadVersion</key>
+      <integer>1</integer>
+      <key>Precomposed</key>
+      <true/>
+      <key>URL</key>
+      <string>https://panfitrion.github.io/videosluchas/</string>
+    </dict>
+  </array>
+  <key>PayloadDescription</key>
+  <string>Acceso directo para abrir WWE Download Center desde GitHub Pages.</string>
+  <key>PayloadDisplayName</key>
+  <string>WWE Download Center</string>
+  <key>PayloadIdentifier</key>
+  <string>com.panfitrion.videosluchas.profile</string>
+  <key>PayloadOrganization</key>
+  <string>Panfitrion</string>
+  <key>PayloadRemovalDisallowed</key>
+  <false/>
+  <key>PayloadType</key>
+  <string>Configuration</string>
+  <key>PayloadUUID</key>
+  <string>C9B24C3B-20F8-41BE-9A05-AE18D15F513D</string>
+  <key>PayloadVersion</key>
+  <integer>1</integer>
+</dict>
+</plist>
