@@ -202,7 +202,7 @@ function v1(o){let g;return g=o.match(/(\w{3,9})\.?\s+(\d{1,2}),\s*(\d{4})/),g&&
         const localVideosInput = document.createElement("input");
         localVideosInput.type = "file";
         localVideosInput.multiple = true;
-        localVideosInput.accept = "video/*,.mp4,.m4v,.mov,.webm,.mkv";
+        localVideosInput.accept = "";
         localVideosInput.style.display = "none";
         localVideosInput.addEventListener("change", function () {
           const files = Array.from(localVideosInput.files || []);
@@ -532,7 +532,7 @@ function v1(o){let g;return g=o.match(/(\w{3,9})\.?\s+(\d{1,2}),\s*(\d{4})/),g&&
 
         async function chooseLocalVideoLibrary() {
           if (isAppleMobile()) {
-            showToast("En iPhone: abre Archivos, entra a la microSD y selecciona todos los videos del mes.");
+            showToast("En iPhone: toca Explorar > Ubicaciones > microSD y selecciona los videos.");
             localVideosInput.click();
             return;
           }
@@ -608,7 +608,7 @@ function v1(o){let g;return g=o.match(/(\w{3,9})\.?\s+(\d{1,2}),\s*(\d{4})/),g&&
           const panel = document.createElement("div");
           panel.id = "wwe-local-library-panel";
           panel.innerHTML = [
-            '<button type="button" data-local-pick>Videos SD</button>',
+            '<button type="button" data-local-pick>Explorar SD</button>',
             '<span data-local-status>elige videos</span>'
           ].join("");
           panel.querySelector("button").addEventListener("click", chooseLocalVideoLibrary);
