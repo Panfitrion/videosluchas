@@ -329,6 +329,32 @@
       white-space: nowrap;
     }
 
+    .month-meta {
+      display: flex;
+      align-items: center;
+      justify-content: flex-end;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+
+    .month-action {
+      min-height: 32px;
+      border: 1px solid rgba(34, 197, 94, .45);
+      border-radius: 8px;
+      background: rgba(34, 197, 94, .13);
+      color: #bbf7d0;
+      cursor: pointer;
+      padding: 0 9px;
+      font-size: 11px;
+      font-weight: 950;
+      white-space: nowrap;
+    }
+
+    .month-action:disabled {
+      opacity: .5;
+      cursor: not-allowed;
+    }
+
     .grid {
       display: grid;
       grid-template-columns: repeat(1, minmax(0, 1fr));
@@ -650,8 +676,6 @@
     const STORAGE_LAST = "wwe_calendar_last_seen_v1";
     const STORAGE_YEAR = "wwe_calendar_year_v1";
     const STORAGE_SD = "wwe_calendar_sd_library_v1";
-    const USE_SERVER = location.protocol === "file:" || ["localhost", "127.0.0.1"].includes(location.hostname);
-    const API_BASE = location.protocol === "file:" ? "http://localhost:8787" : "";
 
     const monthNames = [
       "Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio",
@@ -762,12 +786,9 @@
     let showSeen = false;
     let query = "";
     let seen = readSeen();
-    let downloads = new Map();
     let sdLibrary = readSdLibrary();
     let sessionFiles = new Map();
     let pendingPickItem = null;
-    let serverOnline = false;
-    let refreshTimer = null;
 
     const yearsEl = document.getElementById("years");
     const calendarEl = document.getElementById("calendar");
@@ -845,12 +866,8 @@
       return item.type + "::" + item.date;
     }
 
-    function apiUrl(path) {
-      return API_BASE + path;
-    }
-
     function taskForItem(item) {
-      return downloads.get(catalogKey(item)) || null;
+      return null;
     }
 
     function sdRecordForItem(item) {
@@ -862,25 +879,7 @@
     }
 
     async function refreshDownloads() {
-      if (!USE_SERVER) {
-        serverOnline = false;
-        return;
-      }
-      try {
-        const res = await fetch(apiUrl("/api/downloads"), { cache: "no-store" });
-        const data = await res.json();
-        downloads = new Map();
-        (data.items || []).forEach(task => {
-          if (task.catalogKey) downloads.set(task.catalogKey, task);
-        });
-        serverOnline = true;
-      } catch {
-        serverOnline = false;
-      }
-      render();
-      const active = Array.from(downloads.values()).some(task => task.status === "queued" || task.status === "downloading");
-      clearTimeout(refreshTimer);
-      refreshTimer = setTimeout(refreshDownloads, active ? 1800 : 7000);
+      return;
     }
 
     function normalizeText(value) {
@@ -979,28 +978,31 @@
       setLastSeen(item);
       saveSeen();
       window.open(url, "_blank");
-      setTimeout(() => URL.revokeObjectURL(url), 60000);
     }
 
     async function startDownload(item, button) {
-      button.disabled = true;
-      button.textContent = "Preparando...";
-      try {
-        const res = await fetch(apiUrl("/api/download"), {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            show: item.type,
-            date: item.date,
-            title: item.title
-          })
-        });
-        const data = await res.json();
-        if (data.error) alert(data.error);
-      } catch {
-        alert("No pude conectar con el servidor local. Abre start.command en la carpeta wwe server.");
+      pickFileForItem(item);
+    }
+
+    function monthDownloadItems(monthKey) {
+      return allItemsForYear(selectedYear).filter(item => {
+        if (!item.date.startsWith(monthKey)) return false;
+        if (!["RAW", "SMACKDOWN", "PPV"].includes(item.type)) return false;
+        if (activeFilter === "RAW" || activeFilter === "SMACKDOWN") return item.type === activeFilter;
+        if (activeFilter === "PPV") return item.type === "PPV";
+        return true;
+      });
+    }
+
+    async function startMonthDownload(monthKey, button) {
+      const items = monthDownloadItems(monthKey).filter(item => {
+        return !hasLocalFile(item);
+      });
+      if (!items.length) {
+        alert("Este mes ya esta marcado como en SD o no tiene capitulos con este filtro.");
+        return;
       }
-      await refreshDownloads();
+      importSdFiles();
     }
 
     function generateWeekly(type, weekday, year) {
@@ -1156,9 +1158,8 @@
       const status = document.createElement("span");
       const task = taskForItem(item);
       const downloaded = (task && task.status === "completed") || hasLocalFile(item);
-      const active = task && (task.status === "queued" || task.status === "downloading");
-      status.className = "status-pill " + (downloaded ? "downloaded" : active ? "active" : "missing");
-      status.innerHTML = '<span class="status-dot"></span>' + (downloaded ? "SD" : active ? Math.round(task.progress || 0) + "%" : "No SD");
+      status.className = "status-pill " + (downloaded ? "downloaded" : "missing");
+      status.innerHTML = '<span class="status-dot"></span>' + (downloaded ? "SD" : "No SD");
       const date = document.createElement("span");
       date.className = "date";
       date.textContent = shortDate(item.date);
@@ -1189,25 +1190,13 @@
       const downloadBtn = document.createElement("button");
       downloadBtn.type = "button";
       downloadBtn.className = "media-btn primary";
-      downloadBtn.textContent = USE_SERVER ? (active ? "Descargando" : downloaded ? "Bajar otra vez" : "Descargar A2") : "Marcar SD";
-      downloadBtn.disabled = active || item.type === "PPV" && USE_SERVER;
+      downloadBtn.textContent = "Marcar SD";
+      downloadBtn.disabled = false;
       downloadBtn.addEventListener("click", () => {
-        if (USE_SERVER) startDownload(item, downloadBtn);
-        else pickFileForItem(item);
+        pickFileForItem(item);
       });
 
-      if (downloaded && task.mediaUrl) {
-        const watch = document.createElement("a");
-        watch.className = "media-btn";
-        watch.href = apiUrl(task.mediaUrl);
-        watch.textContent = "Ver SD";
-        watch.addEventListener("click", () => {
-          seen.add(item.id);
-          setLastSeen(item);
-          saveSeen();
-        });
-        actions.append(downloadBtn, watch);
-      } else if (downloaded) {
+      if (downloaded) {
         const watch = document.createElement("button");
         watch.type = "button";
         watch.className = "media-btn";
@@ -1217,13 +1206,9 @@
       } else {
         const watch = document.createElement("button");
         watch.type = "button";
-        watch.className = "media-btn disabled";
-        watch.disabled = USE_SERVER && !serverOnline;
-        watch.textContent = USE_SERVER ? (serverOnline ? "Sin archivo" : "Servidor off") : "Elegir video";
-        if (!USE_SERVER) {
-          watch.classList.remove("disabled");
-          watch.addEventListener("click", () => pickFileForItem(item));
-        }
+        watch.className = "media-btn";
+        watch.textContent = "Elegir video";
+        watch.addEventListener("click", () => pickFileForItem(item));
         actions.append(downloadBtn, watch);
       }
 
@@ -1255,7 +1240,26 @@
         const count = document.createElement("span");
         count.className = "month-count";
         count.textContent = groups.get(key).length + " visibles";
-        summary.append(name, count);
+        const meta = document.createElement("div");
+        meta.className = "month-meta";
+        const monthItems = monthDownloadItems(key);
+        const readyCount = monthItems.filter(item => {
+          const task = taskForItem(item);
+          return hasLocalFile(item) || (task && task.status === "completed");
+        }).length;
+        const action = document.createElement("button");
+        action.type = "button";
+        action.className = "month-action";
+        action.textContent = "Importar mes";
+        action.disabled = !monthItems.length;
+        action.title = readyCount + "/" + monthItems.length + " capitulos en SD";
+        action.addEventListener("click", event => {
+          event.preventDefault();
+          event.stopPropagation();
+          startMonthDownload(key, action);
+        });
+        meta.append(count, action);
+        summary.append(name, meta);
 
         const grid = document.createElement("div");
         grid.className = "grid";
