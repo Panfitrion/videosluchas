@@ -173,11 +173,14 @@ function v1(o){let g;return g=o.match(/(\w{3,9})\.?\s+(\d{1,2}),\s*(\d{4})/),g&&
           "z-index:99997"
         ].join(";");
         playerOverlay.innerHTML = [
-          '<div style="position:absolute;left:0;right:0;top:0;display:flex;align-items:center;justify-content:space-between;gap:12px;padding:calc(env(safe-area-inset-top,0px) + 10px) 12px 10px;background:linear-gradient(to bottom,rgba(2,6,23,.96),rgba(2,6,23,.72),transparent);z-index:2">',
-          '<div id="iphone-player-title" style="min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:#fff;font:700 14px/1.25 -apple-system,BlinkMacSystemFont,Segoe UI,sans-serif"></div>',
-          '<button type="button" data-action="close-player" style="appearance:none;border:1px solid rgba(255,255,255,.18);border-radius:999px;background:rgba(255,255,255,.1);color:#fff;padding:10px 14px;font:700 14px/1 -apple-system,BlinkMacSystemFont,Segoe UI,sans-serif">Cerrar</button>',
+          '<div class="iphone-player-bar">',
+          '<div class="iphone-player-copy">',
+          '<div id="iphone-player-title"></div>',
+          '<div id="iphone-player-source" class="iphone-player-source iphone-player-source-archive">ARCHIVE · usa datos</div>',
           '</div>',
-          '<video id="iphone-native-video" controls playsinline webkit-playsinline preload="metadata" controlslist="nodownload" style="display:block;width:100%;height:auto;max-height:82vh;background:#000;border-radius:12px;outline:none;object-fit:contain"></video>'
+          '<button type="button" data-action="close-player" class="iphone-player-close">Cerrar</button>',
+          '</div>',
+          '<video id="iphone-native-video" controls playsinline webkit-playsinline preload="metadata" controlslist="nodownload"></video>'
         ].join("");
         let activeCard = null;
         let activeDownloadAnchor = null;
@@ -190,6 +193,7 @@ function v1(o){let g;return g=o.match(/(\w{3,9})\.?\s+(\d{1,2}),\s*(\d{4})/),g&&
         localFileInput.multiple = true;
         localFileInput.accept = "video/*,.mp4,.m4v,.mov,.webm,.mkv";
         localFileInput.setAttribute("webkitdirectory", "");
+        localFileInput.setAttribute("directory", "");
         localFileInput.style.display = "none";
         localFileInput.addEventListener("change", function () {
           indexLocalVideoFiles(Array.from(localFileInput.files || []));
@@ -485,7 +489,8 @@ function v1(o){let g;return g=o.match(/(\w{3,9})\.?\s+(\d{1,2}),\s*(\d{4})/),g&&
           const panel = document.getElementById("wwe-local-library-panel");
           if (!panel) return;
           const status = panel.querySelector("[data-local-status]");
-          if (status) status.textContent = localVideoCount ? localVideoCount + " videos" : "sin carpeta";
+          if (status) status.textContent = localVideoCount ? localVideoCount + " locales" : "elige carpeta";
+          panel.classList.toggle("has-local-videos", localVideoCount > 0);
         }
 
         function indexLocalVideoFiles(files) {
@@ -582,8 +587,8 @@ function v1(o){let g;return g=o.match(/(\w{3,9})\.?\s+(\d{1,2}),\s*(\d{4})/),g&&
           const panel = document.createElement("div");
           panel.id = "wwe-local-library-panel";
           panel.innerHTML = [
-            '<button type="button" data-local-pick>SD</button>',
-            '<span data-local-status>sin carpeta</span>'
+            '<button type="button" data-local-pick>Carpeta SD</button>',
+            '<span data-local-status>elige carpeta</span>'
           ].join("");
           panel.querySelector("button").addEventListener("click", chooseLocalVideoLibrary);
           document.body.appendChild(panel);
@@ -627,7 +632,12 @@ function v1(o){let g;return g=o.match(/(\w{3,9})\.?\s+(\d{1,2}),\s*(\d{4})/),g&&
           if (!url) return false;
           const video = playerOverlay.querySelector("#iphone-native-video");
           const title = playerOverlay.querySelector("#iphone-player-title");
-          if (title) title.textContent = getEpisodeTitle(card) + (localFile ? " · SD" : "");
+          const source = playerOverlay.querySelector("#iphone-player-source");
+          if (title) title.textContent = getEpisodeTitle(card);
+          if (source) {
+            source.textContent = localFile ? "LOCAL · sin datos" : "ARCHIVE · usa datos";
+            source.className = "iphone-player-source " + (localFile ? "iphone-player-source-local" : "iphone-player-source-archive");
+          }
           if (!video) return false;
           if (currentLocalVideoUrl) {
             URL.revokeObjectURL(currentLocalVideoUrl);
@@ -639,7 +649,7 @@ function v1(o){let g;return g=o.match(/(\w{3,9})\.?\s+(\d{1,2}),\s*(\d{4})/),g&&
           video.style.display = "block";
           video.preload = "metadata";
           playerOverlay.style.display = "flex";
-          if (localFile) showToast("Reproduciendo desde microSD: " + localFile.name);
+          showToast(localFile ? "LOCAL: reproduciendo sin datos desde microSD." : "ARCHIVE: reproduciendo desde internet.");
           try {
             const playPromise = video.play();
             if (playPromise && typeof playPromise.catch === "function") {
@@ -1253,32 +1263,54 @@ function v1(o){let g;return g=o.match(/(\w{3,9})\.?\s+(\d{1,2}),\s*(\d{4})/),g&&
 
       #wwe-local-library-panel {
         position: fixed;
+        left: 12px;
         right: 12px;
-        bottom: calc(env(safe-area-inset-bottom, 0px) + 12px);
+        bottom: calc(env(safe-area-inset-bottom, 0px) + 10px);
         z-index: 99990;
         display: flex;
         align-items: center;
-        gap: 8px;
-        padding: 8px 10px;
+        justify-content: space-between;
+        gap: 10px;
+        min-height: 52px;
+        padding: 9px 10px;
         border: 1px solid rgba(34, 197, 94, .35);
-        border-radius: 999px;
-        background: rgba(2, 6, 23, .9);
+        border-radius: 16px;
+        background: rgba(2, 6, 23, .94);
         color: #bbf7d0;
         box-shadow: 0 16px 36px rgba(0, 0, 0, .34);
         backdrop-filter: blur(10px);
         -webkit-backdrop-filter: blur(10px);
-        font: 800 12px/1 -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        font: 850 12px/1.1 -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
       }
 
       #wwe-local-library-panel button {
         appearance: none;
         border: 0;
-        border-radius: 999px;
+        border-radius: 12px;
         background: #22c55e;
         color: #052e16;
         cursor: pointer;
-        font: 950 12px/1 -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-        padding: 8px 10px;
+        flex: 1 1 auto;
+        min-height: 38px;
+        font: 950 14px/1 -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        padding: 10px 12px;
+      }
+
+      #wwe-local-library-panel [data-local-status] {
+        flex: 0 0 auto;
+        max-width: 40%;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+        color: #cbd5e1;
+      }
+
+      #wwe-local-library-panel.has-local-videos {
+        border-color: rgba(34, 197, 94, .68);
+      }
+
+      #wwe-local-library-panel.has-local-videos [data-local-status] {
+        color: #86efac;
       }
 
       .wwe-local-video-badge {
@@ -1292,6 +1324,84 @@ function v1(o){let g;return g=o.match(/(\w{3,9})\.?\s+(\d{1,2}),\s*(\d{4})/),g&&
         box-shadow: 0 8px 18px rgba(0, 0, 0, .3);
         font: 950 10px/1 -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
         padding: 5px 7px;
+      }
+
+      #iphone-inline-player {
+        box-sizing: border-box;
+      }
+
+      #iphone-inline-player .iphone-player-bar {
+        position: absolute;
+        left: 0;
+        right: 0;
+        top: 0;
+        z-index: 2;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 10px;
+        padding: calc(env(safe-area-inset-top, 0px) + 9px) 10px 10px;
+        background: linear-gradient(to bottom, rgba(2, 6, 23, .97), rgba(2, 6, 23, .8), transparent);
+      }
+
+      #iphone-inline-player .iphone-player-copy {
+        min-width: 0;
+        display: grid;
+        gap: 5px;
+      }
+
+      #iphone-player-title {
+        min-width: 0;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+        color: #fff;
+        font: 800 13px/1.2 -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      }
+
+      .iphone-player-source {
+        width: fit-content;
+        max-width: 100%;
+        border-radius: 999px;
+        padding: 5px 8px;
+        font: 950 10px/1 -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+
+      .iphone-player-source-local {
+        background: #22c55e;
+        color: #052e16;
+      }
+
+      .iphone-player-source-archive {
+        background: rgba(234, 179, 8, .2);
+        border: 1px solid rgba(234, 179, 8, .45);
+        color: #fde68a;
+      }
+
+      #iphone-inline-player .iphone-player-close {
+        appearance: none;
+        border: 1px solid rgba(255, 255, 255, .2);
+        border-radius: 999px;
+        background: rgba(255, 255, 255, .1);
+        color: #fff;
+        flex: 0 0 auto;
+        min-height: 38px;
+        padding: 10px 13px;
+        font: 800 13px/1 -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      }
+
+      #iphone-native-video {
+        display: block;
+        width: 100%;
+        height: auto;
+        max-height: 82vh;
+        background: #000;
+        border-radius: 12px;
+        outline: none;
+        object-fit: contain;
       }
 
       .wwe-month-actions {
@@ -1349,6 +1459,60 @@ function v1(o){let g;return g=o.match(/(\w{3,9})\.?\s+(\d{1,2}),\s*(\d{4})/),g&&
 
       .wwe-month-grid > .wwe-ppv-item {
         min-height: 100%;
+      }
+
+      @media (max-width: 640px) {
+        body {
+          padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 74px);
+        }
+
+        #iphone-download-toast {
+          bottom: calc(env(safe-area-inset-bottom, 0px) + 76px) !important;
+        }
+
+        .wwe-month-card > summary {
+          align-items: stretch;
+          flex-wrap: wrap;
+          gap: 8px;
+          padding: 12px;
+        }
+
+        .wwe-month-title {
+          flex: 1 1 auto;
+          min-width: 0;
+          font-size: 14px;
+        }
+
+        .wwe-month-count {
+          flex: 0 0 auto;
+          font-size: 11px;
+        }
+
+        .wwe-month-actions {
+          flex: 1 0 100%;
+          display: grid;
+          grid-template-columns: repeat(3, minmax(0, 1fr));
+          gap: 7px;
+          margin-left: 0;
+        }
+
+        .wwe-month-batch-button {
+          min-width: 0;
+          min-height: 34px;
+          padding: 9px 6px;
+          text-align: center;
+          font-size: 11px;
+        }
+
+        #iphone-inline-player {
+          padding: 8px;
+          padding-top: calc(env(safe-area-inset-top, 0px) + 64px);
+        }
+
+        #iphone-native-video {
+          max-height: calc(100vh - 118px - env(safe-area-inset-top, 0px));
+          border-radius: 10px;
+        }
       }
 
       @media (min-width: 640px) {
