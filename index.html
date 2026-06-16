@@ -3,6 +3,14 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, user-scalable=no" />
+    <meta name="theme-color" content="#05070f" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="apple-mobile-web-app-title" content="WWE Luchas" />
+    <meta name="application-name" content="WWE Luchas" />
+    <link rel="manifest" href="./manifest.webmanifest" />
+    <link rel="apple-touch-icon" href="./icons/apple-touch-icon.png" />
     <title>WWE Archive Viewer – TheSquaredCircle1996</title>
     <script>
       window.__renderWweTodoMonths = function (M, EpisodeCard, PpvCard, items, watched, onPlay, onToggleWatched) {
@@ -511,23 +519,40 @@ function v1(o){let g;return g=o.match(/(\w{3,9})\.?\s+(\d{1,2}),\s*(\d{4})/),g&&
           });
         }
 
+        function countUniqueLocalVideos() {
+          return new Set(Array.from(localVideoFiles.values()).map(function (file) {
+            return (file.webkitRelativePath || file.name || "") + "|" + file.size;
+          })).size;
+        }
+
         function updateLocalLibraryControls() {
           const panel = document.getElementById("wwe-local-library-panel");
           if (!panel) return;
           const status = panel.querySelector("[data-local-status]");
-          if (status) status.textContent = localVideoCount ? localVideoCount + " locales" : "1 capitulo";
+          if (status) {
+            status.textContent = localVideoCount
+              ? localVideoCount + (localVideoCount === 1 ? " local" : " locales")
+              : "0 locales";
+          }
           panel.classList.toggle("has-local-videos", localVideoCount > 0);
         }
 
-        function indexLocalVideoFiles(files) {
-          localVideoFiles.clear();
+        function indexLocalVideoFiles(files, options) {
+          const replace = options && options.replace === true;
+          if (replace) localVideoFiles.clear();
+          const before = countUniqueLocalVideos();
           (files || []).forEach(addLocalVideoFile);
-          localVideoCount = new Set(Array.from(localVideoFiles.values()).map(function (file) {
-            return (file.webkitRelativePath || file.name || "") + "|" + file.size;
-          })).size;
+          localVideoCount = countUniqueLocalVideos();
+          const added = Math.max(0, localVideoCount - before);
           updateLocalLibraryControls();
           patchLocalVideoBadges(document);
-          showToast(localVideoCount ? "MicroSD lista: " + localVideoCount + " videos indexados." : "No encontre videos en la seleccion.");
+          if (!localVideoCount) {
+            showToast("No encontre videos en la seleccion.");
+          } else if (added > 0) {
+            showToast("MicroSD lista: " + localVideoCount + " videos indexados (" + added + " nuevos).");
+          } else {
+            showToast("Sin cambios: " + localVideoCount + " videos ya estaban indexados.");
+          }
         }
 
         async function collectFilesFromDirectoryHandle(handle, bucket) {
@@ -621,7 +646,7 @@ function v1(o){let g;return g=o.match(/(\w{3,9})\.?\s+(\d{1,2}),\s*(\d{4})/),g&&
           panel.id = "wwe-local-library-panel";
           panel.innerHTML = [
             '<button type="button" data-local-pick>Abrir SD</button>',
-            '<span data-local-status>1 capitulo</span>'
+            '<span data-local-status>0 locales</span>'
           ].join("");
           panel.querySelector("button").addEventListener("click", chooseLocalVideoLibrary);
           document.body.appendChild(panel);
@@ -2070,6 +2095,18 @@ function v1(o){let g;return g=o.match(/(\w{3,9})\.?\s+(\d{1,2}),\s*(\d{4})/),g&&
           childList: true,
           subtree: true
         });
+      })();
+    </script>
+
+    <script>
+      (function () {
+        if ("serviceWorker" in navigator && location.protocol !== "file:") {
+          window.addEventListener("load", function () {
+            navigator.serviceWorker.register("./wwe-sw.js").catch(function (error) {
+              console.warn("No se pudo registrar la app offline:", error);
+            });
+          });
+        }
       })();
     </script>
   </body>
