@@ -18,8 +18,15 @@
           if (!groups.has(key)) groups.set(key, []);
           groups.get(key).push(item);
         });
-        const blocks = Array.from(groups.keys()).sort().map(function (key, index) {
+        const visibleKeys = Array.from(groups.keys()).sort().filter(function (key) {
           const monthItems = groups.get(key);
+          const episodeItems = monthItems.filter(function (item) { return item.kind === "episode"; });
+          return !episodeItems.length || !episodeItems.every(function (item) { return watched.has(item.ep.id); });
+        });
+        const blocks = visibleKeys.map(function (key, index) {
+          const monthItems = groups.get(key);
+          const episodeItems = monthItems.filter(function (item) { return item.kind === "episode"; });
+          const pendingCount = episodeItems.filter(function (item) { return !watched.has(item.ep.id); }).length;
           const title = key === "Sin fecha" ? "Sin fecha" : (monthNames[key.slice(5, 7)] || key.slice(5, 7)) + " " + key.slice(0, 4);
           return M.jsxs("details", {
             className: "wwe-month-card",
@@ -28,7 +35,7 @@
               M.jsxs("summary", {
                 children: [
                   M.jsx("span", { className: "wwe-month-title", children: title }),
-                  M.jsx("span", { className: "wwe-month-count", children: monthItems.length + " elementos" })
+                  M.jsx("span", { className: "wwe-month-count", children: pendingCount + " pendientes" })
                 ]
               }),
               M.jsx("div", {
@@ -178,7 +185,10 @@ function v1(o){let g;return g=o.match(/(\w{3,9})\.?\s+(\d{1,2}),\s*(\d{4})/),g&&
           '<div id="iphone-player-title"></div>',
           '<div id="iphone-player-source" class="iphone-player-source iphone-player-source-archive">ARCHIVE · usa datos</div>',
           '</div>',
+          '<div class="iphone-player-controls">',
+          '<button type="button" data-action="mark-watched" class="iphone-player-watched">Marcar visto</button>',
           '<button type="button" data-action="close-player" class="iphone-player-close">Cerrar</button>',
+          '</div>',
           '</div>',
           '<video id="iphone-native-video" controls playsinline webkit-playsinline preload="metadata" controlslist="nodownload"></video>'
         ].join("");
@@ -635,6 +645,70 @@ function v1(o){let g;return g=o.match(/(\w{3,9})\.?\s+(\d{1,2}),\s*(\d{4})/),g&&
           });
         }
 
+        function getWatchedToggleButton(card) {
+          return card ? card.querySelector('button[title="Marcar como visto"], button[title="Marcar como no visto"]') : null;
+        }
+
+        function isEpisodeCardWatched(card) {
+          const button = getWatchedToggleButton(card);
+          return !!button && button.getAttribute("title") === "Marcar como no visto";
+        }
+
+        function refreshPlayerWatchedButton(card) {
+          const button = playerOverlay.querySelector('[data-action="mark-watched"]');
+          if (!button) return;
+          const watched = isEpisodeCardWatched(card || activeCard);
+          button.textContent = watched ? "Visto" : "Marcar visto";
+          button.classList.toggle("is-watched", watched);
+        }
+
+        function markEpisodeCardWatched(card, message) {
+          const button = getWatchedToggleButton(card);
+          if (!button) return false;
+          if (button.getAttribute("title") === "Marcar como visto") {
+            button.click();
+            showToast(message || "Capitulo marcado como visto.");
+            setTimeout(function () {
+              refreshPlayerWatchedButton(card);
+              patchMonthBatchControls(document);
+              applyDownloadCenterCopy();
+            }, 80);
+            return true;
+          }
+          refreshPlayerWatchedButton(card);
+          showToast("Este capitulo ya estaba marcado como visto.");
+          return true;
+        }
+
+        function attachAutoWatched(video, card) {
+          if (!video) return;
+          if (video.__wweAutoWatchedHandler) {
+            video.removeEventListener("timeupdate", video.__wweAutoWatchedHandler);
+            video.removeEventListener("ended", video.__wweAutoWatchedHandler);
+            video.removeEventListener("play", video.__wweAutoWatchedHandler);
+          }
+          let done = isEpisodeCardWatched(card);
+          let firstPlayAt = 0;
+          const handler = function (event) {
+            if (done) return;
+            if (event && event.type === "play" && !firstPlayAt) {
+              firstPlayAt = Date.now();
+              refreshPlayerWatchedButton(card);
+              return;
+            }
+            const playedLongEnough = video.currentTime >= 10 || (firstPlayAt && Date.now() - firstPlayAt >= 12000);
+            const nearEnd = video.duration && isFinite(video.duration) && video.duration > 0 && video.currentTime >= Math.max(1, video.duration - 3);
+            if (video.ended || nearEnd || playedLongEnough) {
+              done = true;
+              markEpisodeCardWatched(card, "Marcado como visto por reproduccion.");
+            }
+          };
+          video.__wweAutoWatchedHandler = handler;
+          video.addEventListener("play", handler);
+          video.addEventListener("timeupdate", handler);
+          video.addEventListener("ended", handler);
+        }
+
         function closeInlinePlayer() {
           const video = playerOverlay.querySelector("#iphone-native-video");
           if (video) {
@@ -679,17 +753,12 @@ function v1(o){let g;return g=o.match(/(\w{3,9})\.?\s+(\d{1,2}),\s*(\d{4})/),g&&
           video.style.display = "block";
           video.preload = "metadata";
           playerOverlay.style.display = "flex";
-          showToast("LOCAL: reproduciendo el archivo seleccionado sin datos.");
-          try {
-            const playPromise = video.play();
-            if (playPromise && typeof playPromise.catch === "function") {
-              playPromise.catch(function () {});
-            }
-          } catch {}
+          showToast("LOCAL: listo sin datos. Toca Play cuando quieras verlo.");
           return true;
         }
 
         async function showInlinePlayer(card) {
+          activeCard = card;
           const localFile = findLocalVideoFile(card);
           if (localFile && isAppleMobile() && !isIphonePlayableLocalFile(localFile)) {
             showToast("Ese archivo local no se puede reproducir en iPhone. Uso Archive.");
@@ -716,13 +785,9 @@ function v1(o){let g;return g=o.match(/(\w{3,9})\.?\s+(\d{1,2}),\s*(\d{4})/),g&&
           video.style.display = "block";
           video.preload = "metadata";
           playerOverlay.style.display = "flex";
-          showToast(playableLocalFile ? "LOCAL: reproduciendo sin datos desde microSD." : "ARCHIVE: reproduciendo desde internet.");
-          try {
-            const playPromise = video.play();
-            if (playPromise && typeof playPromise.catch === "function") {
-              playPromise.catch(function () {});
-            }
-          } catch {}
+          refreshPlayerWatchedButton(card);
+          attachAutoWatched(video, card);
+          showToast(playableLocalFile ? "LOCAL: listo sin datos. Toca Play cuando quieras verlo." : "ARCHIVE: listo. Toca Play cuando quieras verlo.");
           return true;
         }
 
@@ -1139,6 +1204,11 @@ function v1(o){let g;return g=o.match(/(\w{3,9})\.?\s+(\d{1,2}),\s*(\d{4})/),g&&
           if (action === "close-player" || event.target === playerOverlay) {
             closeInlinePlayer();
           }
+          if (action === "mark-watched") {
+            event.preventDefault();
+            event.stopPropagation();
+            markEpisodeCardWatched(activeCard, "Capitulo marcado como visto.");
+          }
         });
 
         chooserOverlay.addEventListener("click", function (event) {
@@ -1496,7 +1566,15 @@ function v1(o){let g;return g=o.match(/(\w{3,9})\.?\s+(\d{1,2}),\s*(\d{4})/),g&&
         color: #fde68a;
       }
 
-      #iphone-inline-player .iphone-player-close {
+      #iphone-inline-player .iphone-player-controls {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        flex: 0 0 auto;
+      }
+
+      #iphone-inline-player .iphone-player-close,
+      #iphone-inline-player .iphone-player-watched {
         appearance: none;
         border: 1px solid rgba(255, 255, 255, .2);
         border-radius: 999px;
@@ -1506,6 +1584,43 @@ function v1(o){let g;return g=o.match(/(\w{3,9})\.?\s+(\d{1,2}),\s*(\d{4})/),g&&
         min-height: 38px;
         padding: 10px 13px;
         font: 800 13px/1 -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      }
+
+      #iphone-inline-player .iphone-player-watched {
+        border-color: rgba(34, 197, 94, .55);
+        background: rgba(34, 197, 94, .18);
+        color: #bbf7d0;
+      }
+
+      #iphone-inline-player .iphone-player-watched.is-watched {
+        background: #22c55e;
+        color: #052e16;
+      }
+
+      div.cursor-pointer.group.overflow-hidden button[title="Marcar como visto"],
+      div.cursor-pointer.group.overflow-hidden button[title="Marcar como no visto"] {
+        color: #fff !important;
+        border-color: rgba(34, 197, 94, .86) !important;
+        background: rgba(34, 197, 94, .18) !important;
+        min-width: 42px;
+        min-height: 36px;
+        padding: 0 10px;
+        opacity: 1 !important;
+        box-shadow: 0 0 0 1px rgba(34, 197, 94, .18), 0 8px 20px rgba(0, 0, 0, .28);
+      }
+
+      div.cursor-pointer.group.overflow-hidden button[title="Marcar como no visto"] {
+        background: #22c55e !important;
+        color: #052e16 !important;
+      }
+
+      @media (max-width: 640px) {
+        div.cursor-pointer.group.overflow-hidden button[title="Marcar como visto"],
+        div.cursor-pointer.group.overflow-hidden button[title="Marcar como no visto"] {
+          min-width: 48px;
+          min-height: 40px;
+          border-radius: 999px;
+        }
       }
 
       #iphone-native-video {
