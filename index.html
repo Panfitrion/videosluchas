@@ -542,9 +542,9 @@ function v1(o){let g;return g=o.match(/(\w{3,9})\.?\s+(\d{1,2}),\s*(\d{4})/),g&&
 
         async function chooseLocalVideoLibrary() {
           if (isAppleMobile()) {
-            localVideosInput.multiple = false;
-            localVideosInput.accept = "";
-            showToast("En iPhone: abre 1 capitulo desde Explorar > Ubicaciones > microSD.");
+            localVideosInput.multiple = true;
+            localVideosInput.accept = "video/*,.mp4,.m4v,.mov,.webm,.mkv";
+            showToast("En iPhone: selecciona varios capitulos desde Explorar > Ubicaciones > microSD.");
             localVideosInput.click();
             return;
           }
